@@ -15,16 +15,35 @@ function Dashboard() {
   const [selectedCar, setSelectedCar] = useState(null);
   const [records, setRecords] = useState([]);
   const [fuelFormData, setFuelFormData] = useState({ fuelCost: '', pricePerLitre: '', odometer: '', isFullTank: true });
+  const [showAddCarModal, setShowAddCarModal] = useState(false);
+  const [newCarForm, setNewCarForm] = useState({ name: '', brand: '', model: '', otherSpecs: '' });
 
   const fetchCars = async () => {
     try {
       const res = await api.get('/cars');
       setCars(res.data);
-      if (res.data.length > 0 && !selectedCar) {
-        handleSelectCar(res.data[0].id);
+      if (res.data.length > 0) {
+        if (!selectedCar) handleSelectCar(res.data[0].id);
+        setShowAddCarModal(false);
+      } else {
+        setShowAddCarModal(true);
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleAddQuickCar = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.post('/cars', newCarForm);
+      setCars([res.data, ...cars]);
+      setSelectedCar(res.data);
+      setNewCarForm({ name: '', brand: '', model: '', otherSpecs: '' });
+      setShowAddCarModal(false);
+      Swal.fire('Success', 'Car added! You can now track its fuel consumption.', 'success');
+    } catch (err) {
+      Swal.fire('Error', err.response?.data?.message || 'Failed to add car', 'error');
     }
   };
 
@@ -43,7 +62,9 @@ function Dashboard() {
       const res = await api.get(`/cars/${carId}/records`);
       const formatted = res.data.map(r => ({
         ...r,
-        displayDate: format(new Date(r.date), 'MMM dd, yyyy HH:mm'),
+        displayDate: format(new Date(r.date), "dd MMM ''yy"),
+        displayTime: format(new Date(r.date), 'HH:mm'),
+        xAxisLabel: format(new Date(r.date), 'MMM dd'),
       }));
       setRecords(formatted);
     } catch (err) {
@@ -185,8 +206,34 @@ function Dashboard() {
     );
   };
 
+  const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }) => {
+    if (active && payload && payload.length && payload[0].value != null && payload[0].payload) {
+      const { displayDate, displayTime } = payload[0].payload;
+      return (
+        <div className="bg-[#1f1f1f] p-4 shadow-2xl rounded-xl border border-white/10 flex flex-col items-center min-w-[150px] relative z-[9999]">
+          {/* Main Value */}
+          <p className="text-2xl font-bold text-white leading-none">
+            {prefix}{payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          
+          <div className="mt-3 flex flex-col items-center gap-1">
+            {/* Timestamp from the payload */}
+            <p className="text-sm font-medium text-white/50">
+              {displayDate || label}
+            </p>
+            <p className="text-[11px] font-bold text-white/30 tracking-wider">
+              {displayTime || '??:??'} UTC+7
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className="min-h-screen bg-base-200 p-4 font-sans">
+    <>
+    <div className="min-h-screen bg-base-200 p-4 font-sans relative z-10">
       <div className="navbar bg-base-100 shadow-xl rounded-box mb-6 px-6">
         <div className="flex-1">
           <a className="text-2xl font-bold text-primary tracking-wide">LuxeFuel</a>
@@ -254,13 +301,13 @@ function Dashboard() {
                 <h2 className="card-title text-accent border-b border-base-300 pb-2">Add Fuel Record</h2>
                 <form onSubmit={handleAddFuel} className="flex flex-col gap-2">
                   <label className="text-sm opacity-70">Price of Gas ({currency})</label>
-                  <input required type="number" step="0.01" className="input input-sm input-bordered" value={fuelFormData.fuelCost} onChange={e => setFuelFormData({ ...fuelFormData, fuelCost: e.target.value })} />
+                  <input required type="number" step="0.01" className="input [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none input-sm input-bordered" value={fuelFormData.fuelCost} onChange={e => setFuelFormData({ ...fuelFormData, fuelCost: e.target.value })} />
 
                   <label className="text-sm opacity-70 mt-2">Gas Price per Litre ({currency})</label>
-                  <input required type="number" step="0.01" className="input input-sm input-bordered" value={fuelFormData.pricePerLitre} onChange={e => setFuelFormData({ ...fuelFormData, pricePerLitre: e.target.value })} />
+                  <input required type="number" step="0.01" className="input [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none input-sm input-bordered" value={fuelFormData.pricePerLitre} onChange={e => setFuelFormData({ ...fuelFormData, pricePerLitre: e.target.value })} />
 
                   <label className="text-sm opacity-70 mt-2">Current Mileage (km)</label>
-                  <input required type="number" step="0.1" className="input input-sm input-bordered" value={fuelFormData.odometer} onChange={e => setFuelFormData({ ...fuelFormData, odometer: e.target.value })} />
+                  <input required type="number" step="0.1" className="input [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none input-sm input-bordered" value={fuelFormData.odometer} onChange={e => setFuelFormData({ ...fuelFormData, odometer: e.target.value })} />
 
                   <label className="label cursor-pointer mt-2 justify-start gap-4">
                     <span className="label-text opacity-80 font-medium">Full tank</span>
@@ -287,19 +334,34 @@ function Dashboard() {
               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="card bg-base-100 shadow-xl">
                 <div className="card-body">
                   <h2 className="card-title mb-4">1. Consumption Rate / Time</h2>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={records}>
+                  <div className="h-64 overflow-visible">
+                    <ResponsiveContainer key={`rc-1-${records.length}`} width="100%" height="100%">
+                      <AreaChart data={records} margin={{ top: 20, right: 50, left: 10, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorConsumption" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} dx={-10} />
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--b3))', borderColor: 'transparent', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                        <Area type="linear" connectNulls={true} dataKey="consumptionRate" name="km/L" stroke="#22c55e" fillOpacity={1} fill="url(#colorConsumption)" strokeWidth={6} dot={{ r: 4, fill: "#22c55e", strokeWidth: 0 }} activeDot={{ r: 10, strokeWidth: 4, stroke: "hsl(var(--b1))" }} />
+                        <XAxis 
+                          dataKey="id" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fill: '#888', fontSize: 11 }} 
+                          dy={10} 
+                          tickFormatter={(id) => {
+                            const record = records.find(r => r.id === id);
+                            return record ? record.xAxisLabel : '';
+                          }}
+                        />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 11 }} dx={-10} />
+                        <Tooltip 
+                            content={<CustomTooltip suffix="km/L" />} 
+                            cursor={false}
+                            wrapperStyle={{ zIndex: 1000 }}
+                            allowEscapeViewBox={{ x: false, y: true }}
+                        />
+                        <Area isAnimationActive={false} type="monotone" connectNulls={true} dataKey="consumptionRate" name="km/L" stroke="#22c55e" fillOpacity={1} fill="url(#colorConsumption)" strokeWidth={6} dot={{ r: 4, fill: "#22c55e", strokeWidth: 0, opacity: 1 }} activeDot={{ r: 8, strokeWidth: 0, fill: "#22c55e" }} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -309,19 +371,34 @@ function Dashboard() {
               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }} className="card bg-base-100 shadow-xl">
                 <div className="card-body">
                   <h2 className="card-title mb-4">2. Gas Price Refueled / Time ({currency})</h2>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={convertedRecords}>
+                  <div className="h-64 overflow-visible">
+                    <ResponsiveContainer key={`rc-2-${convertedRecords.length}`} width="100%" height="100%">
+                      <AreaChart data={convertedRecords} margin={{ top: 20, right: 50, left: 10, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} dx={-10} />
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--b3))', borderColor: 'transparent', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} formatter={(value) => [`${symbol}${value.toFixed(2)}`, `Total Cost (${currency})`]} />
-                        <Area type="linear" dataKey="convertedFuelCost" name={`Total Cost (${currency})`} stroke="#22c55e" fillOpacity={1} fill="url(#colorCost)" strokeWidth={6} dot={{ r: 4, fill: "#22c55e", strokeWidth: 0 }} activeDot={{ r: 10, strokeWidth: 4, stroke: "hsl(var(--b1))" }} />
+                        <XAxis 
+                          dataKey="id" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fill: '#888', fontSize: 11 }} 
+                          dy={10}
+                          tickFormatter={(id) => {
+                            const record = convertedRecords.find(r => r.id === id);
+                            return record ? record.xAxisLabel : '';
+                          }}
+                        />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 11 }} dx={-10} />
+                        <Tooltip 
+                          content={<CustomTooltip prefix={symbol} suffix={currency} />} 
+                          cursor={false}
+                          wrapperStyle={{ zIndex: 1000 }}
+                          allowEscapeViewBox={{ x: false, y: true }}
+                        />
+                        <Area isAnimationActive={false} type="monotone" dataKey="convertedFuelCost" name={`Total Cost (${currency})`} stroke="#22c55e" fillOpacity={1} fill="url(#colorCost)" strokeWidth={6} dot={{ r: 4, fill: "#22c55e", strokeWidth: 0, opacity: 1 }} activeDot={{ r: 8, strokeWidth: 0, fill: "#22c55e" }} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -331,30 +408,85 @@ function Dashboard() {
               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2 }} className="card bg-base-100 shadow-xl">
                 <div className="card-body">
                   <h2 className="card-title mb-4">3. Gas Price Per Litre ({currency})</h2>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={convertedRecords}>
+                  <div className="h-64 overflow-visible">
+                    <ResponsiveContainer key={`rc-3-${convertedRecords.length}`} width="100%" height="100%">
+                      <AreaChart data={convertedRecords} margin={{ top: 20, right: 50, left: 10, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} dx={-10} />
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--b3))', borderColor: 'transparent', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} formatter={(value) => [`${symbol}${value.toFixed(2)}`, `${currency} / L`]} />
-                        <Area type="linear" dataKey="convertedPricePerLitre" name={`${currency} / L`} stroke="#22c55e" fillOpacity={1} fill="url(#colorPrice)" strokeWidth={6} dot={{ r: 4, fill: "#22c55e", strokeWidth: 0 }} activeDot={{ r: 10, strokeWidth: 4, stroke: "hsl(var(--b1))" }} />
+                        <XAxis 
+                          dataKey="id" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fill: '#888', fontSize: 11 }} 
+                          dy={10}
+                          tickFormatter={(id) => {
+                            const record = convertedRecords.find(r => r.id === id);
+                            return record ? record.xAxisLabel : '';
+                          }}
+                        />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 11 }} dx={-10} />
+                        <Tooltip 
+                            content={<CustomTooltip prefix={symbol} suffix={`${currency} / L`} />} 
+                            cursor={false}
+                            wrapperStyle={{ zIndex: 1000 }}
+                            allowEscapeViewBox={{ x: false, y: true }}
+                        />
+                        <Area isAnimationActive={false} type="monotone" dataKey="convertedPricePerLitre" name={`${currency} / L`} stroke="#22c55e" fillOpacity={1} fill="url(#colorPrice)" strokeWidth={6} dot={{ r: 4, fill: "#22c55e", strokeWidth: 0, opacity: 1 }} activeDot={{ r: 8, strokeWidth: 0, fill: "#22c55e" }} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
               </motion.div>
-
             </>
           )}
         </div>
       </div>
     </div>
+    {/* Auto Add Car Modal */}
+    {showAddCarModal && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="card bg-base-100 shadow-2xl max-w-md w-full border border-primary/20"
+        >
+          <div className="card-body">
+            <h2 className="card-title text-2xl text-primary mb-2">Welcome to LuxeFuel!</h2>
+            <p className="text-base-content/70 mb-4">To get started with tracking your fuel consumption, please add your first car details below.</p>
+            
+            <form onSubmit={handleAddQuickCar} className="flex flex-col gap-4">
+              <div className="form-control">
+                <label className="label py-1"><span className="label-text font-medium opacity-70">Car Name</span></label>
+                <input required placeholder="e.g. My Daily Driver" className="input input-bordered" value={newCarForm.name} onChange={e => setNewCarForm({ ...newCarForm, name: e.target.value })} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="form-control">
+                  <label className="label py-1"><span className="label-text font-medium opacity-70">Brand</span></label>
+                  <input required placeholder="Toyota" className="input input-bordered" value={newCarForm.brand} onChange={e => setNewCarForm({ ...newCarForm, brand: e.target.value })} />
+                </div>
+                <div className="form-control">
+                  <label className="label py-1"><span className="label-text font-medium opacity-70">Model</span></label>
+                  <input required placeholder="Corolla" className="input input-bordered" value={newCarForm.model} onChange={e => setNewCarForm({ ...newCarForm, model: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="form-control">
+                <label className="label py-1"><span className="label-text font-medium opacity-70">Other Specs (Optional)</span></label>
+                <input placeholder="2024 Hybrid" className="input input-bordered" value={newCarForm.otherSpecs} onChange={e => setNewCarForm({ ...newCarForm, otherSpecs: e.target.value })} />
+              </div>
+
+              <button className="btn btn-primary mt-4 shadow-lg">🚀 Get Started</button>
+            </form>
+          </div>
+        </motion.div>
+      </div>
+    )}
+    </>
   );
 }
 
