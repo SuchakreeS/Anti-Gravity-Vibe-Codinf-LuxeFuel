@@ -7,41 +7,75 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
+model Organization {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  users     User[]
   cars      Car[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  auditLogs AuditLog[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model User {
+  id             Int           @id @default(autoincrement())
+  email          String        @unique
+  password       String
+  name           String
+  role           String        @default("individual")
+  organizationId Int?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  cars           Car[]
+  fuelRecords    FuelRecord[]
+  auditLogs      AuditLog[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model Car {
-  id          Int          @id @default(autoincrement())
-  userId      Int
-  user        User         @relation(fields: [userId], references: [id])
-  name        String
-  brand       String
-  model       String
-  otherSpecs  String?
-  fuelRecords FuelRecord[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id             Int           @id @default(autoincrement())
+  name           String
+  brand          String
+  model          String
+  licensePlate   String?
+  otherSpecs     String?
+  isPersonal     Boolean       @default(false)
+  userId         Int?
+  user           User?         @relation(fields: [userId], references: [id])
+  organizationId Int?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  fuelRecords    FuelRecord[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model FuelRecord {
   id               Int      @id @default(autoincrement())
   carId            Int
   car              Car      @relation(fields: [carId], references: [id])
+  submittedById    Int?
+  submittedBy      User?    @relation(fields: [submittedById], references: [id])
   date             DateTime @default(now())
-  fuelCost         Float    
-  pricePerLitre    Float    
-  odometer         Float    
-  litresRefueled   Float    
-  distanceTraveled Float    
-  consumptionRate  Float?   
+  fuelCost         Float
+  pricePerLitre    Float
+  odometer         Float
+  litresRefueled   Float
+  distanceTraveled Float
+  consumptionRate  Float?
   isFullTank       Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model AuditLog {
+  id             Int          @id @default(autoincrement())
+  action         String
+  entityType     String
+  entityId       Int
+  userId         Int
+  user           User         @relation(fields: [userId], references: [id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  details        String?      @db.Text
+  createdAt      DateTime     @default(now())
 }

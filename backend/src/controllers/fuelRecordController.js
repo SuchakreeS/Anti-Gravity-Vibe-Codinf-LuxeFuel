@@ -1,26 +1,63 @@
-const prisma = require('../prismaClient');
-const { z } = require('zod');
+import prisma from '../prismaClient.js';
+import { z } from 'zod';
 
 const fuelRecordSchema = z.object({
   fuelCost: z.number().positive(),
   pricePerLitre: z.number().positive(),
   odometer: z.number().positive(),
   isFullTank: z.boolean().default(true),
+  date: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), {
+    message: "Invalid date format",
+  }),
 });
 
-exports.addFuelRecord = async (req, res) => {
+/**
+ * Helper: create an audit log entry (only for org users)
+ */
+const createAuditLog = async (action, entityType, entityId, userId, organizationId, details) => {
+  if (!organizationId) return; // no audit for individual users
+  await prisma.auditLog.create({
+    data: {
+      action,
+      entityType,
+      entityId,
+      userId,
+      organizationId,
+      details: details ? JSON.stringify(details) : null
+    }
+  });
+};
+
+/**
+ * Check if user has access to a car (org car or personal car)
+ */
+const findAccessibleCar = async (carId, user) => {
+  const orgId = user.organizationId;
+  if (orgId) {
+    return prisma.car.findFirst({
+      where: {
+        id: carId,
+        OR: [
+          { organizationId: orgId, isPersonal: false },
+          { userId: user.id, isPersonal: true }
+        ]
+      }
+    });
+  }
+  return prisma.car.findFirst({ where: { id: carId, userId: user.id } });
+};
+
+export const addFuelRecord = async (req, res) => {
   try {
     const carId = parseInt(req.params.carId);
     
-    // Verify car belongs to user
-    const car = await prisma.car.findFirst({ where: { id: carId, userId: req.user.id } });
+    const car = await findAccessibleCar(carId, req.user);
     if (!car) return res.status(404).json({ message: 'Car not found' });
 
-    const { fuelCost, pricePerLitre, odometer, isFullTank } = fuelRecordSchema.parse(req.body);
+    const { fuelCost, pricePerLitre, odometer, isFullTank, date } = fuelRecordSchema.parse(req.body);
 
     const litresRefueled = fuelCost / pricePerLitre;
 
-    // Get the most recent fuel record to calculate distance & consumption
     const previousRecord = await prisma.fuelRecord.findFirst({
       where: { carId },
       orderBy: { odometer: 'desc' },
@@ -37,14 +74,12 @@ exports.addFuelRecord = async (req, res) => {
     let consumptionRate = null;
 
     if (isFullTank && previousRecord) {
-      // Find the deeply preceding full tank
       const lastFullTank = await prisma.fuelRecord.findFirst({
         where: { carId, isFullTank: true, odometer: { lt: odometer } },
         orderBy: { odometer: 'desc' }
       });
 
       if (lastFullTank) {
-        // Find all partial fills between the last full tank and the current reading
         const partialFills = await prisma.fuelRecord.findMany({
           where: { 
              carId, 
@@ -69,8 +104,21 @@ exports.addFuelRecord = async (req, res) => {
         litresRefueled,
         distanceTraveled,
         consumptionRate,
-        isFullTank
+        isFullTank,
+        submittedById: req.user.id,
+        date: date ? new Date(date) : undefined
       }
+    });
+
+    // Audit log
+    await createAuditLog('CREATE', 'FuelRecord', record.id, req.user.id, req.user.organizationId, {
+      carId,
+      fuelCost,
+      pricePerLitre,
+      odometer,
+      litresRefueled,
+      isFullTank,
+      date: date || new Date().toISOString()
     });
 
     res.status(201).json(record);
@@ -80,17 +128,19 @@ exports.addFuelRecord = async (req, res) => {
   }
 };
 
-exports.getFuelRecords = async (req, res) => {
+export const getFuelRecords = async (req, res) => {
   try {
     const carId = parseInt(req.params.carId);
     
-    // Verify car belongs to user
-    const car = await prisma.car.findFirst({ where: { id: carId, userId: req.user.id } });
+    const car = await findAccessibleCar(carId, req.user);
     if (!car) return res.status(404).json({ message: 'Car not found' });
 
     const records = await prisma.fuelRecord.findMany({
       where: { carId },
-      orderBy: { date: 'asc' } // chronological order for graphs
+      include: {
+        submittedBy: { select: { id: true, name: true } }
+      },
+      orderBy: { date: 'asc' }
     });
 
     res.json(records);
@@ -139,18 +189,32 @@ const recalculateCarHistory = async (carId) => {
   }
 };
 
-exports.updateFuelRecord = async (req, res) => {
+export const updateFuelRecord = async (req, res) => {
   try {
     const carId = parseInt(req.params.carId);
     const recordId = parseInt(req.params.recordId);
 
-    const car = await prisma.car.findFirst({ where: { id: carId, userId: req.user.id } });
+    const car = await findAccessibleCar(carId, req.user);
     if (!car) return res.status(404).json({ message: 'Car not found' });
 
-    const { fuelCost, pricePerLitre, odometer, isFullTank } = fuelRecordSchema.partial().parse(req.body);
+    const { fuelCost, pricePerLitre, odometer, isFullTank, date } = fuelRecordSchema.partial().parse(req.body);
 
     const existingRecord = await prisma.fuelRecord.findUnique({ where: { id: recordId } });
     if (!existingRecord) return res.status(404).json({ message: 'Record not found' });
+
+    // Org users can only edit records they submitted
+    if (req.user.role === 'user' && existingRecord.submittedById !== req.user.id) {
+      return res.status(403).json({ message: 'You can only edit records you submitted' });
+    }
+
+    // Save before-state for audit
+    const beforeState = {
+      fuelCost: existingRecord.fuelCost,
+      pricePerLitre: existingRecord.pricePerLitre,
+      odometer: existingRecord.odometer,
+      isFullTank: existingRecord.isFullTank,
+      date: existingRecord.date
+    };
 
     const updateData = {};
     if (fuelCost !== undefined && pricePerLitre !== undefined) {
@@ -167,6 +231,7 @@ exports.updateFuelRecord = async (req, res) => {
 
     if (odometer !== undefined) updateData.odometer = odometer;
     if (isFullTank !== undefined) updateData.isFullTank = isFullTank;
+    if (date !== undefined) updateData.date = new Date(date);
 
     await prisma.fuelRecord.update({
       where: { id: recordId },
@@ -174,6 +239,19 @@ exports.updateFuelRecord = async (req, res) => {
     });
 
     await recalculateCarHistory(carId);
+
+    // Audit log with before/after
+    await createAuditLog('UPDATE', 'FuelRecord', recordId, req.user.id, req.user.organizationId, {
+      before: beforeState,
+      after: {
+        fuelCost: updateData.fuelCost ?? beforeState.fuelCost,
+        pricePerLitre: updateData.pricePerLitre ?? beforeState.pricePerLitre,
+        odometer: updateData.odometer ?? beforeState.odometer,
+        isFullTank: updateData.isFullTank ?? beforeState.isFullTank,
+        date: updateData.date ?? beforeState.date
+      }
+    });
+
     res.json({ message: 'Record updated' });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
@@ -181,13 +259,31 @@ exports.updateFuelRecord = async (req, res) => {
   }
 };
 
-exports.deleteFuelRecord = async (req, res) => {
+export const deleteFuelRecord = async (req, res) => {
   try {
     const carId = parseInt(req.params.carId);
     const recordId = parseInt(req.params.recordId);
 
-    const car = await prisma.car.findFirst({ where: { id: carId, userId: req.user.id } });
+    const car = await findAccessibleCar(carId, req.user);
     if (!car) return res.status(404).json({ message: 'Car not found' });
+
+    // Org users (role === 'user') cannot delete records
+    if (req.user.role === 'user') {
+      return res.status(403).json({ message: 'You do not have permission to delete records' });
+    }
+
+    const record = await prisma.fuelRecord.findUnique({ where: { id: recordId } });
+    if (!record) return res.status(404).json({ message: 'Record not found' });
+
+    // Audit log before deletion
+    await createAuditLog('DELETE', 'FuelRecord', recordId, req.user.id, req.user.organizationId, {
+      carId: record.carId,
+      fuelCost: record.fuelCost,
+      pricePerLitre: record.pricePerLitre,
+      odometer: record.odometer,
+      isFullTank: record.isFullTank,
+      date: record.date
+    });
 
     await prisma.fuelRecord.delete({ where: { id: recordId } });
     await recalculateCarHistory(carId);

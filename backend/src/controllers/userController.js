@@ -1,6 +1,6 @@
-const prisma = require('../prismaClient');
-const bcrypt = require('bcrypt');
-const { z } = require('zod');
+import prisma from '../prismaClient.js';
+import bcrypt from 'bcrypt';
+import { z } from 'zod';
 
 const updateProfileSchema = z.object({
   name: z.string().min(2).optional(),
@@ -9,11 +9,15 @@ const updateProfileSchema = z.object({
   newPassword: z.string().min(6).optional(),
 });
 
-exports.getProfile = async (req, res) => {
+export const getProfile = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, name: true, email: true, createdAt: true, updatedAt: true }
+      select: { 
+        id: true, name: true, email: true, role: true, 
+        organizationId: true, createdAt: true, updatedAt: true,
+        organization: { select: { id: true, name: true } }
+      }
     });
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
@@ -22,7 +26,7 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-exports.updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
     const data = updateProfileSchema.parse(req.body);
     const updateData = {};
@@ -52,7 +56,11 @@ exports.updateProfile = async (req, res) => {
     const updated = await prisma.user.update({
       where: { id: req.user.id },
       data: updateData,
-      select: { id: true, name: true, email: true, createdAt: true, updatedAt: true }
+      select: { 
+        id: true, name: true, email: true, role: true,
+        organizationId: true, createdAt: true, updatedAt: true,
+        organization: { select: { id: true, name: true } }
+      }
     });
 
     res.json(updated);

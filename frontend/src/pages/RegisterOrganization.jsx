@@ -7,25 +7,26 @@ import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { motion } from 'framer-motion';
 
-const registerSchema = z.object({
+const registerOrgSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters')
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  organizationName: z.string().min(2, 'Organization name must be at least 2 characters'),
 });
 
-function Register() {
+function RegisterOrganization() {
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(registerSchema)
+    resolver: zodResolver(registerOrgSchema)
   });
 
   const onSubmit = async (data) => {
     try {
-      await api.post('/auth/register', data);
+      await api.post('/auth/register-org', data);
       Swal.fire({
         icon: 'success',
-        title: 'Registration Successful',
-        text: 'Please login your account',
+        title: 'Organization Created!',
+        text: 'Your organization has been registered. Please log in.',
       });
       navigate('/login');
     } catch (err) {
@@ -52,16 +53,41 @@ function Register() {
               Luxe<span className="text-primary">Fuel</span>
             </h1>
             <p className="text-neutral-content/70 text-lg font-light">
-              Join the elite circle of drivers. Track with precision.
+              Manage your fleet. Track with precision.
             </p>
           </div>
 
           <div className="card w-full shadow-2xl bg-base-100/10 backdrop-blur-xl border border-white/10">
             <form className="card-body" onSubmit={handleSubmit(onSubmit)}>
-              <h2 className="text-2xl font-bold mb-4">Create Account</h2>
+              <h2 className="text-2xl font-bold mb-2">Register Organization</h2>
+              <p className="text-sm opacity-50 mb-4">Create your organization and become its admin.</p>
+
+              {/* Organization Name */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-medium opacity-70">Name</span>
+                  <span className="label-text font-medium opacity-70">
+                    <span className="inline-flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                      Organization Name
+                    </span>
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Acme Corp"
+                  className="input input-bordered focus:input-primary bg-white/5 border-white/10 transition-all duration-300"
+                  {...register('organizationName')}
+                />
+                {errors.organizationName && (
+                  <span className="text-error text-xs mt-1">{errors.organizationName.message}</span>
+                )}
+              </div>
+
+              <div className="divider text-xs opacity-20 my-1">ADMIN ACCOUNT</div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium opacity-70">Your Name</span>
                 </label>
                 <input
                   type="text"
@@ -79,7 +105,7 @@ function Register() {
                 </label>
                 <input
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder="admin@acme.com"
                   className="input input-bordered focus:input-primary bg-white/5 border-white/10 transition-all duration-300"
                   {...register('email')}
                 />
@@ -103,20 +129,20 @@ function Register() {
               </div>
               <div className="form-control mt-6">
                 <button className="btn btn-primary btn-block text-lg shadow-lg hover:shadow-primary/20 transition-all duration-500">
-                  Register
+                  Create Organization
                 </button>
               </div>
               <div className="divider text-xs opacity-30 uppercase tracking-widest">OR</div>
               <p className="text-center text-sm opacity-70">
+                Register as individual?{' '}
+                <Link to="/register" className="text-primary font-bold hover:underline transition-all">
+                  Personal Account
+                </Link>
+              </p>
+              <p className="text-center text-sm opacity-70 mt-1">
                 Already have an account?{' '}
                 <Link to="/login" className="text-primary font-bold hover:underline transition-all">
                   Login here
-                </Link>
-              </p>
-              <p className="text-center text-sm opacity-50 mt-1">
-                Registering a fleet?{' '}
-                <Link to="/register-org" className="text-accent font-bold hover:underline transition-all">
-                  Create Organization
                 </Link>
               </p>
             </form>
@@ -138,7 +164,6 @@ function Register() {
             type="video/mp4"
           />
         </video>
-        {/* Gradient Overlay for Fade and Luxury feel */}
         <div 
           className="absolute inset-0 z-20"
           style={{ 
@@ -155,4 +180,4 @@ function Register() {
     </div>
   );
 }
-export default Register;
+export default RegisterOrganization;

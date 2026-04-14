@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client')
-const bcrypt = require('bcrypt')
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient()
 
@@ -7,9 +7,11 @@ async function main() {
   console.log('Start seeding ...')
 
   // Clear existing data
+  await prisma.auditLog.deleteMany()
   await prisma.fuelRecord.deleteMany()
   await prisma.car.deleteMany()
   await prisma.user.deleteMany()
+  await prisma.organization.deleteMany()
 
   const hashedPassword = await bcrypt.hash('password123', 10)
 

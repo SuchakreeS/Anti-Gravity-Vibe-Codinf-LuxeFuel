@@ -1,10 +1,12 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
 
-const authRoutes = require('./routes/authRoutes');
-const carRoutes = require('./routes/carRoutes');
-const userRoutes = require('./routes/userRoutes');
+import authRoutes from './routes/authRoutes.js';
+import carRoutes from './routes/carRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import organizationRoutes from './routes/organizationRoutes.js';
+import auditRoutes from './routes/auditRoutes.js';
 
 const app = express();
 
@@ -14,6 +16,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/cars', carRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/organization', organizationRoutes);
+app.use('/api/audit-logs', auditRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'OK' }));
 
