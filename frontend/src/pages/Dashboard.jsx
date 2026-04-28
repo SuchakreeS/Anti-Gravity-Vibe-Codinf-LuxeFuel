@@ -14,6 +14,7 @@ import ServiceTimeline from '../components/dashboard/ServiceTimeline';
 import { estimateCurrentMileage } from '../utils/maintenance';
 import { useVehicleStore } from '../store/useVehicleStore';
 import MaintenanceForm from '../components/MaintenanceForm';
+import PremiumGuard from '../components/PremiumGuard';
 
 function Dashboard() {
   const { user } = useAuthStore();
@@ -163,12 +164,14 @@ function Dashboard() {
           )}
 
           {/* Maintenance Card (Gated) */}
-          {selectedCar && canAccessMaintenance() && (
-            <MaintenanceCard 
-              car={selectedCar} 
-              currentMileage={estimateCurrentMileage(records[records.length - 1])} 
-              onOpenService={() => setShowMaintenanceModal(true)}
-            />
+          {selectedCar && (
+            <PremiumGuard planRequired="PRO">
+              <MaintenanceCard 
+                car={selectedCar} 
+                currentMileage={estimateCurrentMileage(records[records.length - 1])} 
+                onOpenService={() => setShowMaintenanceModal(true)}
+              />
+            </PremiumGuard>
           )}
         </div>
 

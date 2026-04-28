@@ -7,15 +7,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        asphalt: 'var(--background)',
+        asphalt: '#050508',
         carbon: 'var(--surface)',
-        'jdm-purple': 'var(--midnight-purple)',
-        'neon-violet': 'var(--neon-violet)',
+        'jdm-purple': '#280137',
+        'jdm-neon': '#A855F7',
+        'neon-violet': '#A855F7',
         'turbo-orange': 'var(--turbo-orange)',
         'text-primary': 'var(--text-primary)',
         'text-secondary': 'var(--text-secondary)',
         'industrial-border': 'var(--border)',
-      }
+        'border': 'var(--border)',
+      },
+      fontFamily: {
+        rajdhani: ['Rajdhani', 'sans-serif'],
+      },
     },
   },
   plugins: [require("daisyui")],

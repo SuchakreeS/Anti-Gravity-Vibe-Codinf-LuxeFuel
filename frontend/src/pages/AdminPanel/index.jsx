@@ -10,9 +10,11 @@ import MembersTab from './MembersTab';
 import FleetTab from './FleetTab';
 import AuditTrailTab from './AuditTrailTab';
 
+import PremiumGuard from '../../components/PremiumGuard';
+
 function AdminPanel() {
   const { user } = useAuthStore();
-  const canAccessAuditLog = useAuthStore((state) => state.canAccessAuditLog);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
   const { 
     orgInfo, members, auditLogs, auditPagination, loading,
     fetchOrganization, fetchMembers, addMember, removeMember, fetchAuditLogs
@@ -99,9 +101,7 @@ function AdminPanel() {
   const tabs = [
     { id: 'members', label: '👥 Members', count: members.length },
     { id: 'cars', label: '🚗 Fleet', count: orgCars.length },
-    ...(canAccessAuditLog() ? [
-      { id: 'audit', label: '📋 Audit Trail', count: auditPagination?.total || 0 }
-    ] : []),
+    { id: 'audit', label: '📋 Audit Trail', count: auditPagination?.total || 0 }
   ];
 
   return (
@@ -163,19 +163,21 @@ function AdminPanel() {
         )}
 
         {activeTab === 'audit' && (
-          <AuditTrailTab 
-            auditFilters={auditFilters}
-            setAuditFilters={setAuditFilters}
-            auditPage={auditPage}
-            auditPagination={auditPagination}
-            handleApplyAuditFilters={handleApplyAuditFilters}
-            handleAuditPageChange={handleAuditPageChange}
-            members={members}
-            loading={loading}
-            auditLogs={auditLogs}
-            formatAuditDetails={formatAuditDetails}
-            cars={cars}
-          />
+          <PremiumGuard planRequired="ENTERPRISE">
+            <AuditTrailTab 
+              auditFilters={auditFilters}
+              setAuditFilters={setAuditFilters}
+              auditPage={auditPage}
+              auditPagination={auditPagination}
+              handleApplyAuditFilters={handleApplyAuditFilters}
+              handleAuditPageChange={handleAuditPageChange}
+              members={members}
+              loading={loading}
+              auditLogs={auditLogs}
+              formatAuditDetails={formatAuditDetails}
+              cars={cars}
+            />
+          </PremiumGuard>
         )}
 
       </div>
