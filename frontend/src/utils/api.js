@@ -3,14 +3,10 @@ import { useAuthStore } from '../store/useAuthStore';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-});
-
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  // The auth token lives in an httpOnly cookie now (not readable/settable
+  // from JS) — send it automatically on every request instead of attaching
+  // an Authorization header.
+  withCredentials: true,
 });
 
 api.interceptors.response.use(

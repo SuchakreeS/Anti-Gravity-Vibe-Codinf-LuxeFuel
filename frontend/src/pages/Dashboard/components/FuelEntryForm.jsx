@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { useCurrencyStore } from '../../../store/useCurrencyStore';
 
 function FuelEntryForm({ selectedCar, onAddFuel, stats, onClose }) {
@@ -58,7 +59,7 @@ function FuelEntryForm({ selectedCar, onAddFuel, stats, onClose }) {
           onClick={onClose}
           className="btn btn-ghost btn-sm btn-circle absolute right-4 top-4 text-base-content/50 hover:text-base-content"
         >
-          ✕
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
         <div className="card-body">
           <h2 className="card-title text-accent border-b border-base-300 pb-2 font-['Rajdhani'] font-black italic uppercase tracking-tighter">

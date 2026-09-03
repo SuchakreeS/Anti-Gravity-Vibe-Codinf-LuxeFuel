@@ -26,15 +26,15 @@ function MembersTab({
             <h3 className="font-bold mb-3 text-primary">New Member</h3>
             <form onSubmit={handleAddMember} className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="form-control">
-                <label className="label py-1"><span className="label-text text-sm opacity-70">Name</span></label>
+                <label className="label py-1"><span className="label-text text-sm text-text-secondary">Name</span></label>
                 <input required placeholder="John Doe" className="input input-sm input-bordered" value={memberForm.name} onChange={e => setMemberForm({ ...memberForm, name: e.target.value })} />
               </div>
               <div className="form-control">
-                <label className="label py-1"><span className="label-text text-sm opacity-70">Email</span></label>
+                <label className="label py-1"><span className="label-text text-sm text-text-secondary">Email</span></label>
                 <input required type="email" placeholder="john@acme.com" className="input input-sm input-bordered" value={memberForm.email} onChange={e => setMemberForm({ ...memberForm, email: e.target.value })} />
               </div>
               <div className="form-control">
-                <label className="label py-1"><span className="label-text text-sm opacity-70">Password</span></label>
+                <label className="label py-1"><span className="label-text text-sm text-text-secondary">Password</span></label>
                 <input required type="password" minLength={6} placeholder="••••••" className="input input-sm input-bordered" value={memberForm.password} onChange={e => setMemberForm({ ...memberForm, password: e.target.value })} />
               </div>
               <div className="md:col-span-3 flex gap-2 mt-2">
@@ -47,28 +47,28 @@ function MembersTab({
 
         <div className="flex flex-col gap-3 mt-4">
           {members.length === 0 ? (
-            <div className="text-center opacity-50 py-8">No members yet. Add your first member above!</div>
+            <div className="text-center text-text-secondary py-8">No members yet. Add your first member above!</div>
           ) : (
             members.map(member => (
-              <div key={member.id} className="p-4 bg-base-200 rounded-xl flex justify-between items-center">
+              <div key={member.id} className="p-4 bg-base-200 border border-base-300 rounded-xl flex justify-between items-center hover:border-primary/40 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`avatar placeholder`}>
-                    <div className={`w-10 rounded-full ${member.role === 'admin' ? 'bg-primary text-primary-content' : 'bg-base-300'}`}>
+                    <div className={`w-10 rounded-full ${member.role === 'admin' ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content'}`}>
                       <span className="text-sm font-bold">{member.name.charAt(0).toUpperCase()}</span>
                     </div>
                   </div>
                   <div>
                     <div className="font-bold flex items-center gap-2">
                       {member.name}
-                      <span className={`badge badge-xs ${member.role === 'admin' ? 'badge-primary' : 'badge-ghost'}`}>
+                      <span className={`badge badge-xs ${member.role === 'admin' ? 'badge-primary' : 'bg-base-300 text-base-content border-base-content/10'}`}>
                         {member.role}
                       </span>
                     </div>
-                    <div className="text-sm opacity-60">{member.email}</div>
+                    <div className="text-sm text-text-secondary">{member.email}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs opacity-40">
+                  <span className="text-xs text-text-secondary">
                     Joined {new Date(member.createdAt).toLocaleDateString()}
                   </span>
                   {member.role !== 'admin' && (

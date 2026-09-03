@@ -13,7 +13,7 @@ const loginSchema = z.object({
 });
 
 import { useCyberToast } from '../components/CyberToast';
-import tachometer from '../assets/tachometer.png';
+import tachometer from '../assets/tachometer.webp';
 
 function Login() {
   const cyberToast = useCyberToast();
@@ -25,8 +25,8 @@ function Login() {
 
   const onSubmit = async (data) => {
     try {
-      const res = await api.post('/auth/login', { email: data.email, password: data.password });
-      login(res.data.user, res.data.token, true);
+      const res = await api.post('/auth/login', { email: data.email, password: data.password, rememberMe: true });
+      login(res.data.user, true);
       cyberToast.success('Session Initialized');
       navigate('/dashboard');
     } catch (err) {

@@ -12,11 +12,19 @@ const PremiumGuard = ({ planRequired = 'PRO', children }) => {
     return <>{children}</>;
   }
 
+  // Never render the real (gated) content into the DOM for non-eligible
+  // plans — a CSS blur is trivially defeated via devtools/inspect element.
+  // Show a generic skeleton in its place instead, so the layout footprint
+  // still looks right without exposing any underlying data.
   return (
-    <div className="relative group border border-border rounded-xl overflow-hidden h-full">
-      {/* Blurred Content */}
-      <div className="blur-md pointer-events-none select-none h-full">
-        {children}
+    <div className="relative group border border-border rounded-xl overflow-hidden h-full min-h-[320px]">
+      <div aria-hidden="true" className="p-5 h-full animate-pulse">
+        <div className="h-6 w-2/3 bg-gauge-face border border-chrome/10 rounded-sm mb-4" />
+        <div className="h-4 w-1/2 bg-gauge-face border border-chrome/10 rounded-sm mb-6" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="h-20 bg-gauge-face border border-chrome/10 rounded-sm" />
+          <div className="h-20 bg-gauge-face border border-chrome/10 rounded-sm" />
+        </div>
       </div>
 
       {/* Luxe Lock Overlay */}
@@ -33,8 +41,8 @@ const PremiumGuard = ({ planRequired = 'PRO', children }) => {
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
             className="mb-4"
           >
-            <div className="p-4 bg-jdm-purple/20 rounded-full border border-jdm-neon/30 shadow-neon">
-              <Lock className="w-10 h-10 text-jdm-neon" />
+            <div className="p-4 bg-jdm-purple/20 rounded-full border border-neon-violet/30 shadow-neon">
+              <Lock className="w-10 h-10 text-neon-violet" />
             </div>
           </motion.div>
 

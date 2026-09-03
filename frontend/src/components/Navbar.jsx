@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCurrencyStore } from '../store/useCurrencyStore';
 import { useThemeStore } from '../store/useThemeStore';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, Wrench, ClipboardList, User, Settings, LogOut } from 'lucide-react';
 
 function Navbar() {
   const { user, logout } = useAuthStore();
@@ -90,14 +90,14 @@ function Navbar() {
             </svg>
           </label>
           <ul tabIndex={0} className="dropdown-content menu p-2 shadow-2xl bg-carbon border border-industrial-border rounded-box w-48 z-[110]">
-            <li><Link to="/" className="hover:bg-jdm-purple hover:text-white transition-all">📊 Dashboard</Link></li>
-            <li><Link to="/maintenance" className="hover:bg-jdm-purple hover:text-white transition-all">🛠️ Maintenance</Link></li>
-            <li><Link to="/mileage-log" className="hover:bg-jdm-purple hover:text-white transition-all">📋 Mileage Log</Link></li>
-            <li><Link to="/profile" className="hover:bg-jdm-purple hover:text-white transition-all">👤 Profile</Link></li>
+            <li><Link to="/" className="hover:bg-neon-violet hover:text-white transition-all"><LayoutDashboard className="w-4 h-4" aria-hidden="true" /> Dashboard</Link></li>
+            <li><Link to="/maintenance" className="hover:bg-neon-violet hover:text-white transition-all"><Wrench className="w-4 h-4" aria-hidden="true" /> Maintenance</Link></li>
+            <li><Link to="/mileage-log" className="hover:bg-neon-violet hover:text-white transition-all"><ClipboardList className="w-4 h-4" aria-hidden="true" /> Mileage Log</Link></li>
+            <li><Link to="/profile" className="hover:bg-neon-violet hover:text-white transition-all"><User className="w-4 h-4" aria-hidden="true" /> Profile</Link></li>
             {isAdmin() && (
-              <li><Link to="/admin" className="hover:bg-jdm-purple hover:text-white transition-all">⚙️ Admin Panel</Link></li>
+              <li><Link to="/admin" className="hover:bg-neon-violet hover:text-white transition-all"><Settings className="w-4 h-4" aria-hidden="true" /> Admin Panel</Link></li>
             )}
-            <li><button onClick={logout} className="hover:bg-error hover:text-error-content transition-all">🚪 Logout</button></li>
+            <li><button onClick={logout} className="hover:bg-error hover:text-error-content transition-all"><LogOut className="w-4 h-4" aria-hidden="true" /> Logout</button></li>
           </ul>
         </div>
       </div>

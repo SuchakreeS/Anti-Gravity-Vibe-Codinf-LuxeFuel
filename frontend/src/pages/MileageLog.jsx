@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useCurrencyStore } from '../store/useCurrencyStore';
 import { useVehicleStore } from '../store/useVehicleStore';
 import { useFuelRecords } from '../hooks/useFuelRecords';
+import { FileText, Lock, Zap, Droplet, TrendingUp, Minus } from 'lucide-react';
 import Layout from '../components/Layout';
 import { cyberToast } from '../components/CyberToast';
 import EditFuelRecordModal from './MileageLog/components/EditFuelRecordModal';
@@ -118,7 +119,10 @@ function MileageLog() {
                 }`}
                 onClick={() => cyberToast.info('Exporting PDF...')}
               >
-                {canExportPDF() ? '📄 Export PDF' : '🔒 Export PDF (PRO)'}
+                <span className="inline-flex items-center gap-1.5">
+                  {canExportPDF() ? <FileText className="w-3.5 h-3.5" aria-hidden="true" /> : <Lock className="w-3.5 h-3.5" aria-hidden="true" />}
+                  {canExportPDF() ? 'Export PDF' : 'Export PDF (PRO)'}
+                </span>
               </button>
             </h2>
             <div className="flex flex-col gap-4 mt-2">
@@ -138,17 +142,19 @@ function MileageLog() {
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary">{record.displayDate}</div>
-                          <div className="text-2xl font-black italic text-white mt-1 tracking-tighter">{formatPrice(record.fuelCost)}</div>
-                          <div className="text-xs uppercase font-bold text-text-secondary mt-1 flex gap-2 items-center">
+                          <div className="inline-block mt-1 px-3 py-1.5 bg-gauge-face border border-chrome/20 rounded-sm">
+                            <div className="text-2xl font-black italic text-led-amber font-mono tabular-nums tracking-tighter">{formatPrice(record.fuelCost)}</div>
+                          </div>
+                          <div className="text-xs uppercase font-bold text-text-secondary mt-2 flex gap-2 items-center">
                             {isEV ? (
                               <>
-                                <span className="text-emerald-500">⚡ {(record.kwhAdded || 0).toFixed(2)} kWh</span>
+                                <span className="text-emerald-500 inline-flex items-center gap-1"><Zap className="w-3.5 h-3.5" aria-hidden="true" /> {(record.kwhAdded || 0).toFixed(2)} kWh</span>
                                 <span>//</span>
                                 <span>{formatPrice(record.pricePerKwh)} / kWh</span>
                               </>
                             ) : (
                               <>
-                                <span className="text-emerald-500">💧 {(record.litresRefueled || 0).toFixed(2)} L</span>
+                                <span className="text-emerald-500 inline-flex items-center gap-1"><Droplet className="w-3.5 h-3.5" aria-hidden="true" /> {(record.litresRefueled || 0).toFixed(2)} L</span>
                                 <span>//</span>
                                 <span>{formatPrice(record.pricePerLitre)} / L</span>
                               </>
@@ -156,8 +162,8 @@ function MileageLog() {
                           </div>
                           <div className="mt-3 text-xs uppercase font-black tracking-widest">
                             {record.isFullTank && record.consumptionRate !== null
-                              ? <span className="text-neon-violet">📈 {record.consumptionRate.toFixed(2)} {isEV ? 'km/kWh' : 'km/L'}</span>
-                              : <span className="text-text-secondary">〰️ Partially Filled</span>}
+                              ? <span className="text-neon-violet inline-flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" aria-hidden="true" /> {record.consumptionRate.toFixed(2)} {isEV ? 'km/kWh' : 'km/L'}</span>
+                              : <span className="text-text-secondary inline-flex items-center gap-1"><Minus className="w-3.5 h-3.5" aria-hidden="true" /> Partially Filled</span>}
                           </div>
                           {record.submittedBy && (
                             <div className="mt-2 text-[9px] uppercase font-bold text-text-secondary tracking-widest">
@@ -166,8 +172,10 @@ function MileageLog() {
                           )}
                         </div>
                         <div className="text-right">
-                          <div className="font-black italic text-xl text-white tracking-tighter">{record.odometer} km</div>
-                          {record.distanceTraveled > 0 && <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">+{record.distanceTraveled} km</div>}
+                          <div className="inline-block px-3 py-1.5 bg-gauge-face border border-chrome/20 rounded-sm">
+                            <div className="font-black italic text-xl text-led-amber font-mono tabular-nums tracking-tighter">{record.odometer} km</div>
+                          </div>
+                          {record.distanceTraveled > 0 && <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest mt-1.5">+{record.distanceTraveled} km</div>}
 
                           <div className="flex gap-2 justify-end mt-4">
                             {canEditRecord(record) && (

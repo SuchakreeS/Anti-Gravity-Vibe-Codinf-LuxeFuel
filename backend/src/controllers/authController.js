@@ -1,3 +1,5 @@
+import { handleError } from '../utils/errorHandler.js';
+import { AUTH_COOKIE_NAME, authCookieOptions, clearAuthCookieOptions } from '../utils/authCookie.js';
 import prisma from '../prismaClient.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -19,6 +21,7 @@ const registerOrgSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
+  rememberMe: z.boolean().optional().default(true),
 });
 
 export const register = async (req, res) => {
@@ -38,7 +41,7 @@ export const register = async (req, res) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -85,46 +88,55 @@ export const registerOrganization = async (req, res) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = loginSchema.parse(req.body);
-    const user = await prisma.user.findUnique({ 
+    const { email, password, rememberMe } = loginSchema.parse(req.body);
+    const user = await prisma.user.findUnique({
       where: { email },
       include: { organization: { select: { id: true, name: true, plan: true } } }
     });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    
+
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    
-    const secret = process.env.JWT_SECRET || 'changeme123';
-    const token = jwt.sign({ id: user.id }, secret, { expiresIn: '3d' });
-    
-    res.json({ 
-      token, 
-      user: { 
-        id: user.id, 
-        email: user.email, 
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+    res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions(rememberMe));
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
         name: user.name,
         role: user.role,
         plan: user.plan,
         organizationId: user.organizationId,
         organizationName: user.organization?.name || null,
         orgPlan: user.organization?.plan || null
-      } 
+      }
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
+};
+
+export const logout = (req, res) => {
+  res.clearCookie(AUTH_COOKIE_NAME, clearAuthCookieOptions());
+  res.json({ message: 'Logged out' });
+};
+
+export const me = async (req, res) => {
+  // authMiddleware has already loaded and validated req.user from the cookie.
+  res.json({ user: req.user });
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useCurrencyStore } from '../../../store/useCurrencyStore';
@@ -34,13 +34,24 @@ function DashboardCharts({ records, convertedRecords, car, useHundredKm, setUseH
   };
 
   // Transform consumption data based on the selected standard
-  const transformedRecords = records.map(r => {
+  const transformedRecords = useMemo(() => records.map(r => {
     let val = r.consumptionRate;
     if (val !== null && useHundredKm) {
       val = 100 / val;
     }
     return { ...r, processedConsumption: val };
-  });
+  }), [records, useHundredKm]);
+
+  // O(1) id -> record lookups for chart tick formatters, instead of an O(n)
+  // .find() on every tick render.
+  const transformedById = useMemo(
+    () => new Map(transformedRecords.map(r => [r.id, r])),
+    [transformedRecords]
+  );
+  const convertedById = useMemo(
+    () => new Map(convertedRecords.map(r => [r.id, r])),
+    [convertedRecords]
+  );
 
   const unit = getUnit();
 
@@ -83,7 +94,7 @@ function DashboardCharts({ records, convertedRecords, car, useHundredKm, setUseH
                   tick={{ fill: '#475569', fontSize: 10, fontWeight: 'bold' }}
                   dy={10}
                   tickFormatter={(id) => {
-                    const record = transformedRecords.find(r => r.id === id);
+                    const record = transformedById.get(id);
                     return record ? record.xAxisLabel : '';
                   }}
                 />
@@ -121,7 +132,7 @@ function DashboardCharts({ records, convertedRecords, car, useHundredKm, setUseH
                   tick={{ fill: '#475569', fontSize: 10, fontWeight: 'bold' }}
                   dy={10}
                   tickFormatter={(id) => {
-                    const record = convertedRecords.find(r => r.id === id);
+                    const record = convertedById.get(id);
                     return record ? record.xAxisLabel : '';
                   }}
                 />
@@ -159,7 +170,7 @@ function DashboardCharts({ records, convertedRecords, car, useHundredKm, setUseH
                   tick={{ fill: '#475569', fontSize: 10, fontWeight: 'bold' }}
                   dy={10}
                   tickFormatter={(id) => {
-                    const record = convertedRecords.find(r => r.id === id);
+                    const record = convertedById.get(id);
                     return record ? record.xAxisLabel : '';
                   }}
                 />
@@ -180,4 +191,4 @@ function DashboardCharts({ records, convertedRecords, car, useHundredKm, setUseH
   );
 }
 
-export default DashboardCharts;
+export default React.memo(DashboardCharts);

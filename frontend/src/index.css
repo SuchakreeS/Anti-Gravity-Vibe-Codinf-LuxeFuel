@@ -8,15 +8,22 @@
   --background: #050508;      /* Deep Asphalt */
   --surface: #0F111A;         /* Carbon Slate */
   --border: #1E293B;          /* Industrial Navy */
-  
+
   --midnight-purple: #280137;
   --neon-violet: #A855F7;
   --turbo-orange: #F97316;
-  
+
   --text-primary: #F8FAFC;
   --text-secondary: #94A3B8;
-  
+
   --shadow-neon: 0 0 15px rgba(168, 85, 247, 0.4);
+
+  /* Instrument-cluster tokens: a real gauge/LED readout's face doesn't
+     change color when the dash trim around it switches light/dark, so
+     these stay constant across both themes. */
+  --gauge-face: #0A0A0C;
+  --chrome: #C7CCD6;
+  --led-amber: #FFB020;
 }
 
 [data-theme='light_jdm'] {

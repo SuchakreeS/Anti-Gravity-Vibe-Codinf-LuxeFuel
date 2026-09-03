@@ -1,3 +1,9 @@
 node_modules
 .env
 dist
+
+# local scratch/debug scripts and their captured output (may contain tokens/creds)
+test-reg.js
+test-output.txt
+reg-output.txt
+*-output.txt

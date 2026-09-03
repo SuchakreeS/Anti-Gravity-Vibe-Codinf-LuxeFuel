@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 // ─── Standalone API (callable outside React) ───
 let _addToastFn = null;
@@ -141,7 +142,7 @@ export const CyberToastProvider = ({ children }) => {
                         onClick={() => removeToast(toast.id)}
                         className="text-text-secondary hover:text-white transition-colors text-xs"
                       >
-                        ✕
+                        <X className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
                     </div>
                     <p className="font-['Rajdhani'] font-bold text-sm tracking-widest text-white uppercase italic">

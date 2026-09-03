@@ -13,7 +13,7 @@ const registerSchema = z.object({
 });
 
 import { useCyberToast } from '../components/CyberToast';
-import tachometer from '../assets/tachometer.png';
+import tachometer from '../assets/tachometer.webp';
 
 function Register() {
   const cyberToast = useCyberToast();

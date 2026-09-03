@@ -1,3 +1,4 @@
+import { handleError } from '../utils/errorHandler.js';
 import prisma from '../prismaClient.js';
 
 export const getAuditLogs = async (req, res) => {
@@ -96,6 +97,6 @@ export const getAuditLogs = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };

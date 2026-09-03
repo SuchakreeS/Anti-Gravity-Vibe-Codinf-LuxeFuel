@@ -21,6 +21,7 @@ import { generateFuelReport } from '../utils/reportGenerator';
 
 function Dashboard() {
   const { user } = useAuthStore();
+  const canExportPDF = useAuthStore((state) => state.canExportPDF);
   const {
     cars,
     selectedCar,
@@ -182,13 +183,15 @@ function Dashboard() {
                 useHundredKm={useHundredKm} 
                 setUseHundredKm={setUseHundredKm} 
               />
-              <button
-                onClick={() => generateFuelReport(selectedCar, records, stats)}
-                className="btn btn-outline btn-accent w-full mt-4 flex items-center justify-center gap-2 uppercase font-black italic tracking-widest text-xs border-2 shadow-neon hover:bg-accent hover:text-black transition-all duration-300"
-              >
-                <FileDown className="w-4 h-4" />
-                Export Telemetry PDF
-              </button>
+              {canExportPDF() && (
+                <button
+                  onClick={() => generateFuelReport(selectedCar, records, stats)}
+                  className="btn btn-outline btn-accent w-full mt-4 flex items-center justify-center gap-2 uppercase font-black italic tracking-widest text-xs border-2 shadow-neon hover:bg-accent hover:text-black transition-all duration-300"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Export Telemetry PDF
+                </button>
+              )}
             </>
           )}
 

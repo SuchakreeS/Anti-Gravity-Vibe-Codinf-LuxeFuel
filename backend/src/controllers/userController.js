@@ -1,3 +1,4 @@
+import { handleError } from '../utils/errorHandler.js';
 import prisma from '../prismaClient.js';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
@@ -34,7 +35,7 @@ export const getProfile = async (req, res) => {
       updatedAt: user.updatedAt
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -89,6 +90,6 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };

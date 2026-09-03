@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useCurrencyStore } from '../../../store/useCurrencyStore';
 import FuelGauge from '../../../components/dashboard/FuelGauge';
 
@@ -33,17 +34,19 @@ function DashboardStats({ stats, car, useHundredKm, setUseHundredKm }) {
         />
       )}
 
-      {/* 2. Financial Stats Summary */}
-      <div className="stats shadow-2xl w-full bg-carbon border border-industrial-border text-text-primary">
+      {/* 2. Financial Stats Summary — rendered as a dark instrument readout
+          (like a trip computer's digital display) so the numbers stay
+          legible and on-theme in both light and dark mode. */}
+      <div className="stats shadow-2xl w-full bg-gauge-face border border-chrome/20 text-text-primary">
         <div className="stat px-4 py-3">
-          <div className="stat-title text-text-secondary text-[10px] font-black uppercase tracking-widest">Total Spent</div>
-          <div className="stat-value text-2xl font-black italic text-turbo-orange drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">
+          <div className="stat-title text-chrome text-[10px] font-black uppercase tracking-widest">Total Spent</div>
+          <div className="stat-value text-2xl font-black italic text-led-amber font-mono tabular-nums drop-shadow-[0_0_8px_rgba(255,176,32,0.35)]">
             {symbol()}{totalSpent?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
           </div>
         </div>
-        <div className="stat px-4 py-3 border-l border-industrial-border">
-          <div className="stat-title text-text-secondary text-[10px] font-black uppercase tracking-widest">Avg Cost/km</div>
-          <div className="stat-value text-xl font-bold font-mono">
+        <div className="stat px-4 py-3 border-l border-chrome/20">
+          <div className="stat-title text-chrome text-[10px] font-black uppercase tracking-widest">Avg Cost/km</div>
+          <div className="stat-value text-xl font-bold font-mono tabular-nums text-led-amber">
             {avgCostPerKm ? `${symbol()}${avgCostPerKm.toFixed(2)}` : 'N/A'}
           </div>
         </div>
@@ -104,8 +107,10 @@ function DashboardStats({ stats, car, useHundredKm, setUseHundredKm }) {
             <div className="stat py-2 items-center text-center">
               <div className="stat-title text-current opacity-80 text-[10px] uppercase font-black tracking-widest">Difference</div>
               <div className="stat-value text-2xl font-black italic flex items-center justify-center gap-2 tracking-tighter">
-                {comparison.isEfficiencyImproved ? '📉' : '📈'} 
-                {useHundredKm 
+                {comparison.isEfficiencyImproved
+                  ? <TrendingDown className="w-5 h-5" aria-hidden="true" />
+                  : <TrendingUp className="w-5 h-5" aria-hidden="true" />}
+                {useHundredKm
                   ? `${(100/comparison.latest - 100/comparison.previous).toFixed(2)}`
                   : `${(comparison.isEfficiencyImproved ? '+' : '')}${comparison.diff.toFixed(2)}`
                 }

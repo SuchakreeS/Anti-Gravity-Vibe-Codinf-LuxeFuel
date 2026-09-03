@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { AlertTriangle, Settings, CheckCircle2 } from 'lucide-react';
 import { calculateHealth, getHealthColor, MAINTENANCE_CATEGORIES } from '../../utils/maintenance';
 
 const MaintenanceCard = ({ car, currentMileage, onOpenService }) => {
@@ -34,25 +35,26 @@ const MaintenanceCard = ({ car, currentMileage, onOpenService }) => {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden relative"
+      className="card bg-carbon border border-industrial-border shadow-2xl overflow-hidden relative"
     >
       <div className="card-body p-5">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">
+            <h3 className="text-text-secondary text-xs font-bold uppercase tracking-widest mb-1">
               Predictive Maintenance
             </h3>
-            <h2 className="text-white text-xl font-black italic">VEHICLE HEALTH</h2>
+            <h2 className="text-text-primary text-xl font-black italic">VEHICLE HEALTH</h2>
           </div>
-          <div className="text-right">
-            <span className="text-2xl font-mono font-bold" style={{ color: healthColor }}>
+          <div className="text-right px-3 py-1.5 bg-gauge-face border border-chrome/20 rounded-sm">
+            <span className="text-2xl font-mono font-bold tabular-nums" style={{ color: healthColor }}>
               {overallHealth}%
             </span>
           </div>
         </div>
 
-        {/* Overall Progress Bar */}
-        <div className="relative h-4 w-full bg-slate-800 rounded-sm border border-slate-700 p-[2px] mb-6">
+        {/* Overall Progress Bar — dark gauge-face track with a chrome bezel,
+            same instrument look as FuelGauge.jsx's track. */}
+        <div className="relative h-4 w-full bg-gauge-face rounded-sm border border-chrome/30 p-[2px] mb-6 shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)]">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${overallHealth}%` }}
@@ -67,12 +69,12 @@ const MaintenanceCard = ({ car, currentMileage, onOpenService }) => {
           {categoryHealths.map((cat) => (
             <div key={cat.key} className="flex flex-col gap-1">
               <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
-                <span className="text-slate-400">{cat.label}</span>
+                <span className="text-text-secondary">{cat.label}</span>
                 <span style={{ color: getHealthColor(cat.health) }}>{cat.health}%</span>
               </div>
-              <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className="h-full transition-all duration-500" 
+              <div className="h-1 w-full bg-gauge-face border border-chrome/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full transition-all duration-500"
                   style={{ width: `${cat.health}%`, backgroundColor: getHealthColor(cat.health) }}
                 />
               </div>
@@ -80,11 +82,15 @@ const MaintenanceCard = ({ car, currentMileage, onOpenService }) => {
           ))}
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between">
-          <span className="text-[10px] text-slate-500 font-bold italic uppercase">
-            {minHealth < 30 ? '⚠ IMMEDIATE SERVICE REQUIRED' : minHealth < 80 ? '⚙ SERVICE RECOMMENDED SOON' : '✔ OPTIMAL CONDITION'}
+        <div className="mt-4 pt-4 border-t border-industrial-border flex items-center justify-between">
+          <span className="text-[10px] text-text-secondary font-bold italic uppercase inline-flex items-center gap-1.5">
+            {minHealth < 30
+              ? <><AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" /> IMMEDIATE SERVICE REQUIRED</>
+              : minHealth < 80
+                ? <><Settings className="w-3.5 h-3.5" aria-hidden="true" /> SERVICE RECOMMENDED SOON</>
+                : <><CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" /> OPTIMAL CONDITION</>}
           </span>
-          <button 
+          <button
             onClick={onOpenService}
             className="btn btn-xs bg-emerald-500 hover:bg-emerald-400 border-none text-slate-950 font-black px-4 rounded-sm"
           >
@@ -92,7 +98,7 @@ const MaintenanceCard = ({ car, currentMileage, onOpenService }) => {
           </button>
         </div>
       </div>
-      
+
       {/* Industrial aesthetic details */}
       <div className="absolute top-0 right-0 p-1 opacity-10 pointer-events-none">
         <svg width="40" height="40" viewBox="0 0 40 40">

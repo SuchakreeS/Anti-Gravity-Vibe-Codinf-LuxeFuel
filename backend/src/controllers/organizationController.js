@@ -1,3 +1,4 @@
+import { handleError } from '../utils/errorHandler.js';
 import prisma from '../prismaClient.js';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
@@ -19,7 +20,7 @@ export const getOrganization = async (req, res) => {
     if (!org) return res.status(404).json({ message: 'Organization not found' });
     res.json(org);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -28,11 +29,12 @@ export const getMembers = async (req, res) => {
     const members = await prisma.user.findMany({
       where: { organizationId: req.user.organizationId },
       select: { id: true, name: true, email: true, role: true, createdAt: true },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      take: 1000 // defensive cap; no UI paginates this list today
     });
     res.json(members);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -63,48 +65,135 @@ export const createMember = async (req, res) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
 export const removeMember = async (req, res) => {
-// ... existing logic ...
+  try {
+    const memberId = parseInt(req.params.id, 10);
+    if (Number.isNaN(memberId)) {
+      return res.status(400).json({ message: 'Invalid member id' });
+    }
+
+    if (memberId === req.user.id) {
+      return res.status(400).json({ message: 'You cannot remove yourself' });
+    }
+
+    const member = await prisma.user.findFirst({
+      where: { id: memberId, organizationId: req.user.organizationId },
+    });
+    if (!member) {
+      return res.status(404).json({ message: 'Member not found in your organization' });
+    }
+
+    if (member.role === 'ADMIN') {
+      const adminCount = await prisma.user.count({
+        where: { organizationId: req.user.organizationId, role: 'ADMIN' },
+      });
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: 'Cannot remove the last admin of the organization' });
+      }
+    }
+
+    // No cascading/SetNull rule is defined on Car/FuelRecord/AuditLog -> User in the
+    // schema, so a hard delete would fail on the FK constraint if the member has any
+    // history. Block with a clear message instead of letting Prisma throw.
+    const [carCount, recordCount, logCount] = await Promise.all([
+      prisma.car.count({ where: { userId: memberId } }),
+      prisma.fuelRecord.count({ where: { submittedById: memberId } }),
+      prisma.auditLog.count({ where: { userId: memberId } }),
+    ]);
+    if (carCount > 0 || recordCount > 0 || logCount > 0) {
+      return res.status(409).json({
+        message: 'This member has cars, fuel records, or audit history and cannot be removed. Reassign or delete their data first.',
+      });
+    }
+
+    await prisma.user.delete({ where: { id: memberId } });
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'DELETE',
+        entityType: 'User',
+        entityId: memberId,
+        userId: req.user.id,
+        organizationId: req.user.organizationId,
+        details: JSON.stringify({ removedEmail: member.email, removedName: member.name }),
+      },
+    });
+
+    res.json({ message: 'Member removed' });
+  } catch (error) {
+    handleError(res, error);
+  }
 };
 
 export const getLeaderboard = async (req, res) => {
   try {
     const orgId = req.user.organizationId;
 
-    // Get all users in org with their records
+    // Get org users first (cheap) instead of pulling every fuel record for
+    // every user into memory.
     const users = await prisma.user.findMany({
       where: { organizationId: orgId },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        fuelRecords: {
-          include: { car: { select: { name: true, brand: true } } },
-          orderBy: { date: 'desc' }
-        }
-      }
+      select: { id: true, name: true, role: true }
     });
+    const userIds = users.map(u => u.id);
+
+    if (userIds.length === 0) return res.json([]);
+
+    // Aggregate totals per user in the DB instead of summing in Node.
+    const [totals, greenCounts, recentLogsByUser] = await Promise.all([
+      prisma.fuelRecord.groupBy({
+        by: ['submittedById'],
+        where: { submittedById: { in: userIds } },
+        _sum: { carbonEmitted: true, distanceTraveled: true, consumptionRate: true },
+        _count: { _all: true }
+      }),
+      prisma.fuelRecord.groupBy({
+        by: ['submittedById'],
+        where: { submittedById: { in: userIds }, fuelType: { in: ['E20', 'E85'] } },
+        _count: { _all: true }
+      }),
+      Promise.all(users.map(user =>
+        prisma.fuelRecord.findMany({
+          where: { submittedById: user.id },
+          include: { car: { select: { name: true, brand: true } } },
+          orderBy: { date: 'desc' },
+          take: 5
+        })
+      ))
+    ]);
+
+    const totalsByUser = new Map(totals.map(t => [t.submittedById, t]));
+    const greenByUser = new Map(greenCounts.map(g => [g.submittedById, g._count._all]));
+    const recentByUser = new Map(users.map((user, i) => [user.id, recentLogsByUser[i]]));
 
     const leaderboard = users.map(user => {
-      const records = user.fuelRecords;
-      const totalCO2 = records.reduce((sum, r) => sum + (r.carbonEmitted || 0), 0);
-      const totalDist = records.reduce((sum, r) => sum + (r.distanceTraveled || 0), 0);
-      
-      // Calculate Avg Eco-Pulse (Simplified for leaderboard)
-      const avgEfficiency = records.length > 0 
-        ? records.reduce((sum, r) => sum + (r.consumptionRate || 0), 0) / records.length
-        : 0;
-      
-      // E85/E20 adoption %
-      const greenLogs = records.filter(r => ['E20', 'E85'].includes(r.fuelType)).length;
-      const greenAdoption = records.length > 0 ? (greenLogs / records.length) * 100 : 0;
+      const t = totalsByUser.get(user.id);
+      const logCount = t?._count._all || 0;
+      const totalCO2 = t?._sum.carbonEmitted || 0;
+      const totalDist = t?._sum.distanceTraveled || 0;
 
-      // Final Rank Score (0-100)
+      // Matches the original semantics: null consumptionRate counts as 0,
+      // divided by the total record count (not just non-null records).
+      const avgEfficiency = logCount > 0 ? (t?._sum.consumptionRate || 0) / logCount : 0;
+
+      const greenLogs = greenByUser.get(user.id) || 0;
+      const greenAdoption = logCount > 0 ? (greenLogs / logCount) * 100 : 0;
+
       const pulseScore = Math.round(Math.min(100, (avgEfficiency * 4) + (greenAdoption * 0.3)));
+
+      const recentLogs = (recentByUser.get(user.id) || []).map(r => ({
+        id: r.id,
+        date: r.date,
+        carName: r.car.name,
+        distance: r.distanceTraveled,
+        consumption: r.consumptionRate,
+        fuelType: r.fuelType,
+        co2: r.carbonEmitted
+      }));
 
       return {
         id: user.id,
@@ -113,22 +202,14 @@ export const getLeaderboard = async (req, res) => {
         pulseScore,
         totalCO2: totalCO2 / 1000, // convert to tons
         totalDist,
-        logCount: records.length,
+        logCount,
         greenAdoption: Math.round(greenAdoption),
-        recentLogs: records.slice(0, 5).map(r => ({
-          id: r.id,
-          date: r.date,
-          carName: r.car.name,
-          distance: r.distanceTraveled,
-          consumption: r.consumptionRate,
-          fuelType: r.fuelType,
-          co2: r.carbonEmitted
-        }))
+        recentLogs
       };
     }).sort((a, b) => b.pulseScore - a.pulseScore);
 
     res.json(leaderboard);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };

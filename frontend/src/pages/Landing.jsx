@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Fuel, Settings, Globe } from 'lucide-react';
 
 const Landing = () => {
   return (
@@ -55,17 +56,17 @@ const Landing = () => {
             {
               title: "Fuel Precision",
               desc: "Track every drop with military-grade accuracy. Real-time consumption analytics at your fingertips.",
-              icon: "⛽"
+              icon: Fuel
             },
             {
               title: "Predictive Health",
               desc: "AI-driven maintenance alerts before parts fail. Stay ahead of the curve.",
-              icon: "⚙️"
+              icon: Settings
             },
             {
               title: "Global Currency",
               desc: "Seamless exchange for international rallies. Track expenses in any major currency.",
-              icon: "🌍"
+              icon: Globe
             }
           ].map((feature, i) => (
             <motion.div
@@ -76,7 +77,7 @@ const Landing = () => {
               viewport={{ once: true }}
               className="bg-carbon border border-industrial-border p-8 rounded-sm hover:border-neon-violet transition-colors duration-500 group"
             >
-              <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">{feature.icon}</div>
+              <feature.icon className="w-10 h-10 mb-4 text-neon-violet group-hover:scale-110 transition-transform duration-300" aria-hidden="true" />
               <h3 className="text-2xl font-black uppercase italic text-text-primary mb-3">{feature.title}</h3>
               <p className="text-text-secondary leading-relaxed font-medium">
                 {feature.desc}

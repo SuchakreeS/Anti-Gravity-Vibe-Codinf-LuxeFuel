@@ -85,6 +85,9 @@ fuelRecords         FuelRecord[]
 maintenanceData     String?       @db.Text
 createdAt           DateTime      @default(now())
 updatedAt           DateTime      @updatedAt
+
+  @@index([organizationId, isPersonal])
+  @@index([userId, isPersonal])
 }
 model FuelRecord {
   id               Int      @id @default(autoincrement())
@@ -107,6 +110,8 @@ model FuelRecord {
   isFullTank       Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  @@index([carId, odometer, date])
 }
 
 model AuditLog {
@@ -120,4 +125,6 @@ model AuditLog {
   organization   Organization @relation(fields: [organizationId], references: [id])
   details        String?      @db.Text
   createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
 }

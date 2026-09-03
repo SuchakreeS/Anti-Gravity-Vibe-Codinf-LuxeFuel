@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+import { Fuel, Wrench, Settings, ClipboardList } from 'lucide-react';
 import { useCurrencyStore } from '../../store/useCurrencyStore';
 import { MAINTENANCE_CATEGORIES } from '../../utils/maintenance';
 
@@ -49,13 +50,13 @@ const ServiceTimeline = ({ records = [], car, onOpenMaintenance }) => {
   const getTypeStyles = (type) => {
     switch (type) {
       case 'fuel-full':
-        return { dot: 'bg-neon-violet shadow-neon', icon: '⛽' };
+        return { dot: 'bg-neon-violet shadow-neon', Icon: Fuel };
       case 'service':
-        return { dot: 'bg-turbo-orange shadow-[0_0_10px_rgba(249,115,22,0.4)]', icon: '🔧' };
+        return { dot: 'bg-turbo-orange shadow-[0_0_10px_rgba(249,115,22,0.4)]', Icon: Wrench };
       case 'maintenance':
-        return { dot: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]', icon: '⚙️' };
+        return { dot: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]', Icon: Settings };
       default:
-        return { dot: 'bg-text-secondary', icon: '📋' };
+        return { dot: 'bg-text-secondary', Icon: ClipboardList };
     }
   };
 
@@ -114,7 +115,7 @@ const ServiceTimeline = ({ records = [], car, onOpenMaintenance }) => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-sm">{styles.icon}</span>
+                        <styles.Icon className="w-3.5 h-3.5 text-text-secondary" aria-hidden="true" />
                         <span className="text-xs font-black uppercase tracking-wider text-white truncate">
                           {entry.title}
                         </span>
@@ -124,7 +125,7 @@ const ServiceTimeline = ({ records = [], car, onOpenMaintenance }) => {
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-xs font-black italic text-turbo-orange font-['Rajdhani']">
+                      <div className="text-xs font-black italic text-led-amber font-mono tabular-nums px-2 py-0.5 bg-gauge-face border border-chrome/20 rounded-sm inline-block">
                         {symbol()}{convert(entry.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                       <div className="text-[9px] text-text-secondary/40 font-bold uppercase tracking-widest">

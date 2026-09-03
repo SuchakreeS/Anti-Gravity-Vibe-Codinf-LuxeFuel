@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import CyberUploader from '../../../components/CyberUploader';
 import { uploadCarPhoto } from '../../../utils/upload';
 
@@ -51,7 +52,7 @@ function AddCarModal({ onAddCar, onClose, makes, models, fetchModels, loadingMak
               type="button"
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-asphalt border border-industrial-border flex items-center justify-center text-text-secondary hover:text-white hover:border-white transition-all z-10"
             >
-              ✕
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
           <h2 className="text-2xl font-black italic uppercase text-white mb-1 tracking-tighter pr-8">Initialize Vehicle</h2>

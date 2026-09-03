@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Radio, Users, Car, ClipboardList } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useOrganization } from '../../hooks/useOrganization';
 import { useCars } from '../../hooks/useCars';
@@ -144,10 +145,10 @@ function AdminPanel() {
   };
 
   const tabs = [
-    { id: 'command', label: '📡 Command Center' },
-    { id: 'members', label: '👥 Members', count: members.length },
-    { id: 'cars', label: '🚗 Fleet', count: orgCars.length },
-    { id: 'audit', label: '📋 Audit Trail', count: auditPagination?.total || 0 }
+    { id: 'command', label: 'Command Center', icon: Radio },
+    { id: 'members', label: 'Members', icon: Users, count: members.length },
+    { id: 'cars', label: 'Fleet', icon: Car, count: orgCars.length },
+    { id: 'audit', label: 'Audit Trail', icon: ClipboardList, count: auditPagination?.total || 0 }
   ];
 
   return (
@@ -161,7 +162,7 @@ function AdminPanel() {
               <span className="badge badge-primary badge-lg">{orgInfo.name}</span>
             )}
           </div>
-          <p className="opacity-50">Manage your organization, fleet, and view activity.</p>
+          <p className="text-text-secondary">Manage your organization, fleet, and view activity.</p>
         </motion.div>
 
         {/* Tabs */}
@@ -172,9 +173,10 @@ function AdminPanel() {
               className={`tab tab-lg flex-1 gap-2 transition-all ${activeTab === tab.id ? 'tab-active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
             >
+              <tab.icon className="w-4 h-4" aria-hidden="true" />
               {tab.label}
               {tab.count !== undefined && (
-                <span className="badge badge-sm badge-ghost">{tab.count}</span>
+                <span className="badge badge-sm bg-base-300 text-base-content border-base-content/10">{tab.count}</span>
               )}
             </button>
           ))}

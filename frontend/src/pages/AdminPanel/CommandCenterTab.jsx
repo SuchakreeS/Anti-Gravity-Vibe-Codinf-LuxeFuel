@@ -32,8 +32,8 @@ const CommandCenterTab = () => {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 animate-pulse">Syncing Fleet Data...</span>
+        <div className="w-12 h-12 border-4 border-neon-violet/20 border-t-neon-violet rounded-full animate-spin" />
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-neon-violet animate-pulse">Syncing Fleet Data...</span>
       </div>
     </div>
   );
@@ -47,8 +47,10 @@ const CommandCenterTab = () => {
              <ShieldCheck className="w-12 h-12" />
           </div>
           <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-1 block">Total Fleet Impact</span>
-          <div className="text-3xl font-black text-emerald-400 italic">
-            {totalOrgCO2.toFixed(2)} <span className="text-sm opacity-50">TONS CO2</span>
+          <div className="inline-block px-3 py-1.5 bg-gauge-face border border-chrome/20 rounded-sm">
+            <span className="text-3xl font-black text-led-amber font-mono tabular-nums italic">
+              {totalOrgCO2.toFixed(2)} <span className="text-sm text-chrome opacity-70 not-italic">TONS CO2</span>
+            </span>
           </div>
           <p className="text-[9px] text-text-secondary mt-2 uppercase font-bold tracking-tighter italic">Verified scope 1 emissions</p>
         </div>
@@ -58,8 +60,10 @@ const CommandCenterTab = () => {
              <Zap className="w-12 h-12" />
           </div>
           <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-1 block">Avg. Fleet Pulse</span>
-          <div className="text-3xl font-black text-neon-violet italic">
-            {Math.round(avgFleetPulse)} <span className="text-sm opacity-50">/100</span>
+          <div className="inline-block px-3 py-1.5 bg-gauge-face border border-chrome/20 rounded-sm">
+            <span className="text-3xl font-black text-led-amber font-mono tabular-nums italic">
+              {Math.round(avgFleetPulse)} <span className="text-sm text-chrome opacity-70 not-italic">/100</span>
+            </span>
           </div>
           <p className="text-[9px] text-text-secondary mt-2 uppercase font-bold tracking-tighter italic">Efficiency across all sectors</p>
         </div>
@@ -144,7 +148,7 @@ const CommandCenterTab = () => {
                     className={`group cursor-pointer transition-colors ${expandedUser === user.id ? 'bg-neon-violet/10' : 'bg-asphalt/50 hover:bg-neon-violet/5'}`}
                   >
                     <td className="border-y border-l border-industrial-border rounded-l-sm py-4">
-                      <span className={`text-lg font-black italic ${i === 0 ? 'text-turbo-orange' : 'text-text-secondary/40'}`}>
+                      <span className={`inline-block px-2 py-1 bg-gauge-face border border-chrome/20 rounded-sm text-lg font-black italic font-mono ${i === 0 ? 'text-turbo-orange' : 'text-led-amber'}`}>
                         #{i + 1}
                       </span>
                     </td>
@@ -154,13 +158,13 @@ const CommandCenterTab = () => {
                     </td>
                     <td className="border-y border-industrial-border py-4">
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-16 bg-white/5 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${user.pulseScore > 80 ? 'bg-emerald-500' : 'bg-turbo-orange'}`} 
-                            style={{ width: `${user.pulseScore}%` }} 
+                        <div className="h-1.5 w-16 bg-gauge-face border border-chrome/30 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${user.pulseScore > 80 ? 'bg-emerald-500' : 'bg-turbo-orange'}`}
+                            style={{ width: `${user.pulseScore}%` }}
                           />
                         </div>
-                        <span className={`font-black italic ${user.pulseScore > 80 ? 'text-emerald-400' : 'text-white'}`}>{user.pulseScore}</span>
+                        <span className={`font-black italic font-mono ${user.pulseScore > 80 ? 'text-emerald-400' : 'text-led-amber'}`}>{user.pulseScore}</span>
                       </div>
                     </td>
                     <td className="border-y border-industrial-border py-4">

@@ -1,3 +1,6 @@
+import { handleError } from '../utils/errorHandler.js';
+import { parseIntParam } from '../utils/validation.js';
+import { computeFuelHistory } from '../utils/fuelHistory.js';
 import prisma from '../prismaClient.js';
 import { z } from 'zod';
 
@@ -52,7 +55,8 @@ const findAccessibleCar = async (carId, user) => {
 
 export const addFuelRecord = async (req, res) => {
   try {
-    const carId = parseInt(req.params.carId);
+    const carId = parseIntParam(req.params.carId);
+    if (carId === null) return res.status(400).json({ message: 'Invalid car id' });
 
     const car = await findAccessibleCar(carId, req.user);
     if (!car) return res.status(404).json({ message: 'Car not found' });
@@ -100,17 +104,22 @@ export const addFuelRecord = async (req, res) => {
     res.status(201).json(record);
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
 export const getFuelRecords = async (req, res) => {
   try {
-    const carId = parseInt(req.params.carId);
+    const carId = parseIntParam(req.params.carId);
+    if (carId === null) return res.status(400).json({ message: 'Invalid car id' });
 
     const car = await findAccessibleCar(carId, req.user);
     if (!car) return res.status(404).json({ message: 'Car not found' });
 
+    // Not truly paginated: the dashboard's cumulative charts (lifetime CO2,
+    // total distance, etc.) need the whole history, so slicing this would
+    // silently corrupt those numbers. This is only a safety net against a
+    // pathological number of records, not a real pagination limit.
     const records = await prisma.fuelRecord.findMany({
       where: { carId },
       include: {
@@ -120,54 +129,36 @@ export const getFuelRecords = async (req, res) => {
         { odometer: 'asc' },
         { date: 'asc' },
         { id: 'asc' }
-      ]
+      ],
+      take: 20000
     });
 
     res.json(records);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
-const EMISSION_FACTORS = {
-  GASOLINE: 2.31,
-  DIESEL: 2.68,
-  E20: 1.85,
-  E85: 1.51,
-  ELECTRICITY: 0.40,
+// A record's derived fields depend on the whole history (global average
+// consumption is drawn from the first/last full-tank record in the entire
+// set), so they can change for records before *and* after an edit — see
+// fuelHistory.test.js. We still have to recompute every record in memory,
+// but we only need to WRITE the rows whose computed values actually changed,
+// which is the common case (e.g. logging a new partial fill-up leaves every
+// earlier record untouched).
+const FLOAT_EPSILON = 1e-9;
+const numbersDiffer = (a, b) => {
+  if (a === b) return false;
+  if (a == null || b == null) return true;
+  return Math.abs(a - b) > FLOAT_EPSILON;
 };
 
-const calculateGlobalAvgConsumption = (records, engineType) => {
-  const fullTankRecords = records.filter(r => r.isFullTank);
-  if (fullTankRecords.length < 2) return null;
-
-  const firstFT = fullTankRecords[0];
-  const lastFT = fullTankRecords[fullTankRecords.length - 1];
-  const totalDist = lastFT.odometer - firstFT.odometer;
-  
-  const midRecords = records.slice(records.indexOf(firstFT) + 1, records.indexOf(lastFT) + 1);
-  const totalEnergy = midRecords.reduce((sum, r) => {
-    const litres = r.litresRefueled || 0;
-    const kwh = r.kwhAdded || 0;
-    if (engineType === 'EV') return sum + kwh;
-    if (engineType === 'ICE' || engineType === 'HEV') return sum + litres;
-    return sum + litres + (kwh / 8.9);
-  }, 0);
-  
-  return totalEnergy > 0 ? totalDist / totalEnergy : null;
-};
-
-const calculateNewBlendFactor = (carTankSize, runningFuelLevel, fuelUsed, addedLitres, addedFactor, currentBlendFactor) => {
-  if (carTankSize <= 0) return currentBlendFactor;
-  
-  const remainingLitres = Math.max(0, ((runningFuelLevel / 100) * carTankSize) - fuelUsed);
-  const newTotalLitres = remainingLitres + addedLitres;
-  
-  if (newTotalLitres > 0) {
-    return ((remainingLitres * currentBlendFactor) + (addedLitres * addedFactor)) / newTotalLitres;
-  }
-  return currentBlendFactor;
-};
+const hasChanged = (original, updated) => (
+  numbersDiffer(original.distanceTraveled, updated.distanceTraveled) ||
+  numbersDiffer(original.consumptionRate, updated.consumptionRate) ||
+  numbersDiffer(original.fuelLevel, updated.fuelLevel) ||
+  numbersDiffer(original.carbonEmitted, updated.carbonEmitted)
+);
 
 export const recalculateCarHistory = async (carId) => {
   const car = await prisma.car.findUnique({ where: { id: carId } });
@@ -182,74 +173,12 @@ export const recalculateCarHistory = async (carId) => {
 
   if (records.length === 0) return;
 
-  const globalAvgConsumption = calculateGlobalAvgConsumption(records, car.engineType);
-  
-  let lastFullTankIdx = -1;
-  let runningFuelLevel = 100; // Starting assumption
-  let currentBlendFactor = car.currentCarbonFactor || 2.31;
-  
-  // Track updates in memory to avoid N+1 queries and excessive DB writes
-  const recordUpdates = records.map(r => ({ ...r }));
+  const { recordUpdates, newCarbonFactor } = computeFuelHistory(records, car);
 
-  for (let i = 0; i < recordUpdates.length; i++) {
-    const current = recordUpdates[i];
-    const previous = i > 0 ? recordUpdates[i - 1] : null;
-    
-    current.distanceTraveled = previous ? current.odometer - previous.odometer : 0;
-    
-    const segmentConsumption = globalAvgConsumption || 10;
-    const fuelUsed = current.distanceTraveled / segmentConsumption;
-    current.carbonEmitted = fuelUsed * currentBlendFactor;
+  // Only write rows whose computed values actually changed.
+  const changedUpdates = recordUpdates.filter((update, i) => hasChanged(records[i], update));
 
-    const addedFactor = EMISSION_FACTORS[current.fuelType] || (car.engineType === 'EV' ? 0.40 : 2.31);
-    const addedLitres = current.litresRefueled || 0; // For PHEV/ICE tank mixing
-    
-    currentBlendFactor = calculateNewBlendFactor(
-      car.tankSize, 
-      runningFuelLevel, 
-      fuelUsed, 
-      addedLitres, 
-      addedFactor, 
-      currentBlendFactor
-    );
-
-    if (current.isFullTank) {
-      current.fuelLevel = 100;
-      if (lastFullTankIdx !== -1) {
-        const segmentRecords = recordUpdates.slice(lastFullTankIdx + 1, i + 1);
-        const segmentEnergy = segmentRecords.reduce((sum, r) => {
-          const litres = r.litresRefueled || 0;
-          const kwh = r.kwhAdded || 0;
-          if (car.engineType === 'EV') return sum + kwh;
-          if (car.engineType === 'ICE' || car.engineType === 'HEV') return sum + litres;
-          return sum + litres + (kwh / 8.9);
-        }, 0);
-        const segmentDist = current.odometer - recordUpdates[lastFullTankIdx].odometer;
-        
-        if (segmentEnergy > 0) {
-          const segmentAvg = segmentDist / segmentEnergy;
-          for (let j = lastFullTankIdx + 1; j <= i; j++) {
-            recordUpdates[j].consumptionRate = segmentAvg;
-          }
-        }
-      }
-      lastFullTankIdx = i;
-      runningFuelLevel = 100;
-    } else {
-      current.consumptionRate = globalAvgConsumption;
-      if (car.tankSize > 0 && car.engineType !== 'EV') {
-        const remainingAfterUsage = ((runningFuelLevel / 100) * car.tankSize) - fuelUsed;
-        const totalAfterRefill = remainingAfterUsage + addedLitres;
-        current.fuelLevel = Math.min(100, Math.max(0, (totalAfterRefill / car.tankSize) * 100));
-        runningFuelLevel = current.fuelLevel;
-      } else {
-        current.fuelLevel = null;
-      }
-    }
-  }
-
-  // Execute all updates in a single transaction
-  const transactionOperations = recordUpdates.map(update => 
+  const transactionOperations = changedUpdates.map(update =>
     prisma.fuelRecord.update({
       where: { id: update.id },
       data: {
@@ -264,7 +193,7 @@ export const recalculateCarHistory = async (carId) => {
   transactionOperations.push(
     prisma.car.update({
       where: { id: carId },
-      data: { currentCarbonFactor: currentBlendFactor }
+      data: { currentCarbonFactor: newCarbonFactor }
     })
   );
 
@@ -273,8 +202,11 @@ export const recalculateCarHistory = async (carId) => {
 
 export const updateFuelRecord = async (req, res) => {
   try {
-    const carId = parseInt(req.params.carId);
-    const recordId = parseInt(req.params.recordId);
+    const carId = parseIntParam(req.params.carId);
+    const recordId = parseIntParam(req.params.recordId);
+    if (carId === null || recordId === null) {
+      return res.status(400).json({ message: 'Invalid car or record id' });
+    }
 
     const car = await findAccessibleCar(carId, req.user);
     if (!car) return res.status(404).json({ message: 'Car not found' });
@@ -282,7 +214,9 @@ export const updateFuelRecord = async (req, res) => {
     const { fuelCost, pricePerLitre, odometer, isFullTank, fuelLevel, date } = fuelRecordSchema.partial().parse(req.body);
 
     const existingRecord = await prisma.fuelRecord.findUnique({ where: { id: recordId } });
-    if (!existingRecord) return res.status(404).json({ message: 'Record not found' });
+    if (!existingRecord || existingRecord.carId !== carId) {
+      return res.status(404).json({ message: 'Record not found' });
+    }
 
     // Org users can only edit records they submitted
     if (req.user.role === 'USER' && existingRecord.submittedById !== req.user.id) {
@@ -345,14 +279,17 @@ export const updateFuelRecord = async (req, res) => {
     res.json({ message: 'Record updated' });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };
 
 export const deleteFuelRecord = async (req, res) => {
   try {
-    const carId = parseInt(req.params.carId);
-    const recordId = parseInt(req.params.recordId);
+    const carId = parseIntParam(req.params.carId);
+    const recordId = parseIntParam(req.params.recordId);
+    if (carId === null || recordId === null) {
+      return res.status(400).json({ message: 'Invalid car or record id' });
+    }
 
     const car = await findAccessibleCar(carId, req.user);
     if (!car) return res.status(404).json({ message: 'Car not found' });
@@ -363,7 +300,9 @@ export const deleteFuelRecord = async (req, res) => {
     }
 
     const record = await prisma.fuelRecord.findUnique({ where: { id: recordId } });
-    if (!record) return res.status(404).json({ message: 'Record not found' });
+    if (!record || record.carId !== carId) {
+      return res.status(404).json({ message: 'Record not found' });
+    }
 
     // Audit log before deletion
     await createAuditLog('DELETE', 'FuelRecord', recordId, req.user.id, req.user.organizationId, {
@@ -380,6 +319,6 @@ export const deleteFuelRecord = async (req, res) => {
 
     res.json({ message: 'Record deleted' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    handleError(res, error);
   }
 };

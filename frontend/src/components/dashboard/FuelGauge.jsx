@@ -43,8 +43,9 @@ const FuelGauge = ({ level, engineType }) => {
         )}
       </div>
 
-      {/* The Gauge Visual */}
-      <div className="w-full h-4 bg-carbon rounded-full border border-industrial-border p-[2px] relative overflow-hidden">
+      {/* The Gauge Visual — the face stays dark-glass in both themes, like a
+          real instrument cluster; only the trim around it follows the theme. */}
+      <div className="w-full h-4 bg-gauge-face rounded-full border border-chrome/30 p-[2px] relative overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)]">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${level}%` }}
@@ -83,4 +84,4 @@ const FuelGauge = ({ level, engineType }) => {
   );
 };
 
-export default FuelGauge;
+export default React.memo(FuelGauge);

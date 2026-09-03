@@ -79,25 +79,27 @@ const EcoPulseCard = ({ records = [], car }) => {
           ))}
         </div>
 
-        {/* Metrics Grid */}
+        {/* Metrics Grid — plain counts, not a status signal, so they get the
+            neutral gauge-face/led-amber instrument treatment. The score
+            above stays emerald/orange since that IS a status signal. */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-asphalt/50 border border-industrial-border p-3 rounded-sm">
+          <div className="bg-gauge-face border border-chrome/20 p-3 rounded-sm">
             <div className="flex items-center gap-2 mb-1">
               <Wind className="w-3 h-3 text-emerald-500" />
-              <span className="text-[10px] font-bold text-text-secondary uppercase">CO2 Purged</span>
+              <span className="text-[10px] font-bold text-chrome uppercase">CO2 Purged</span>
             </div>
-            <div className="text-xl font-black text-white italic">
-              {totalCO2.toFixed(3)} <span className="text-[10px] opacity-40">TONS</span>
+            <div className="text-xl font-black text-led-amber font-mono tabular-nums italic">
+              {totalCO2.toFixed(3)} <span className="text-[10px] text-chrome opacity-70 not-italic">TONS</span>
             </div>
           </div>
 
-          <div className="bg-asphalt/50 border border-industrial-border p-3 rounded-sm">
+          <div className="bg-gauge-face border border-chrome/20 p-3 rounded-sm">
             <div className="flex items-center gap-2 mb-1">
               <Leaf className="w-3 h-3 text-emerald-500" />
-              <span className="text-[10px] font-bold text-text-secondary uppercase">Forest Impact</span>
+              <span className="text-[10px] font-bold text-chrome uppercase">Forest Impact</span>
             </div>
-            <div className="text-xl font-black text-white italic">
-              {trees} <span className="text-[10px] opacity-40">TREES</span>
+            <div className="text-xl font-black text-led-amber font-mono tabular-nums italic">
+              {trees} <span className="text-[10px] text-chrome opacity-70 not-italic">TREES</span>
             </div>
           </div>
         </div>
@@ -117,4 +119,4 @@ const EcoPulseCard = ({ records = [], car }) => {
   );
 };
 
-export default EcoPulseCard;
+export default React.memo(EcoPulseCard);

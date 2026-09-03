@@ -35,10 +35,10 @@ const OperatorRankCard = ({ user, records = [] }) => {
               {rank.title}
             </h2>
             <div className="flex items-center gap-2 mt-1">
-              <div className="h-1 w-24 bg-asphalt rounded-full overflow-hidden">
+              <div className="h-1 w-24 bg-gauge-face border border-chrome/20 rounded-full overflow-hidden">
                 <div className="h-full bg-neon-violet" style={{ width: `${(records.length / 20) * 100}%` }} />
               </div>
-              <span className="text-[9px] font-bold text-text-secondary/50 uppercase">XP: {records.length}/20 Logs</span>
+              <span className="text-[9px] font-bold text-led-amber font-mono uppercase">XP: {records.length}/20 Logs</span>
             </div>
           </div>
         </div>
@@ -47,7 +47,7 @@ const OperatorRankCard = ({ user, records = [] }) => {
         <div className="relative z-20">
           <div className="flex items-center justify-between mb-3 px-1">
             <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Unlockable Badges</span>
-            <span className="text-[10px] font-black text-neon-violet">{unlockedBadges.length} / {BADGES.length}</span>
+            <span className="text-[10px] font-black text-led-amber font-mono px-1.5 py-0.5 bg-gauge-face border border-chrome/20 rounded-sm">{unlockedBadges.length} / {BADGES.length}</span>
           </div>
 
           <div className="grid grid-cols-5 gap-2">
@@ -96,4 +96,4 @@ const OperatorRankCard = ({ user, records = [] }) => {
   );
 };
 
-export default OperatorRankCard;
+export default React.memo(OperatorRankCard);

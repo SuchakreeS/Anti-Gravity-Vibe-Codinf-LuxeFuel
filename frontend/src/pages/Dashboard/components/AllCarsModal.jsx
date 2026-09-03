@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { ASSETS } from '../../../utils/assets';
 
 function AllCarsModal({ cars, selectedCar, setSelectedCar, onClose }) {
@@ -23,7 +24,7 @@ function AllCarsModal({ cars, selectedCar, setSelectedCar, onClose }) {
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-asphalt border border-industrial-border flex items-center justify-center text-text-secondary hover:text-white hover:border-white transition-all"
           >
-            ✕
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 

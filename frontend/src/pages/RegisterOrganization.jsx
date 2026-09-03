@@ -6,7 +6,7 @@ import api from '../utils/api';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCyberToast } from '../components/CyberToast';
-import command_center from '../assets/command_center.png';
+import command_center from '../assets/command_center.webp';
 
 const registerOrgSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),

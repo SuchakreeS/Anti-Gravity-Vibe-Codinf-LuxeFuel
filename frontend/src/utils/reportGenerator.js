@@ -17,7 +17,16 @@ export const generateFuelReport = async (car, records, stats) => {
 
     if (!cachedFont) {
       try {
-        const response = await fetch('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf');
+        // Pinned to a specific commit (not the mutable @main ref) so the
+        // font can't change out from under us, plus a timeout so a slow/
+        // hanging CDN request can't stall the export indefinitely.
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch(
+          'https://cdn.jsdelivr.net/gh/google/fonts@7d82a06388d70ec34312df7e7cede76ba8bbf7b5/ofl/sarabun/Sarabun-Regular.ttf',
+          { signal: controller.signal }
+        );
+        clearTimeout(timeoutId);
         if (response.ok) {
           const buffer = await response.arrayBuffer();
           const bytes = new Uint8Array(buffer);
@@ -118,7 +127,7 @@ export const generateFuelReport = async (car, records, stats) => {
   }
 
   // --- Download ---
-  const fileName = `${car.name.replace(/\s+/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+  const fileName = `${(car.name ?? 'Unnamed_Vehicle').replace(/\s+/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
   cyberToast.success('PDF Exported successfully');
   } catch (error) {

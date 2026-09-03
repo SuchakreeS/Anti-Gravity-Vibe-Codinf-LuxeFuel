@@ -28,3 +28,25 @@ export const requireOrgMember = (req, res, next) => {
   }
   next();
 };
+
+const PLAN_ORDER = ['FREE', 'PRO', 'ENTERPRISE'];
+
+/**
+ * Require the requesting user's (or their organization's) plan to be at least
+ * `minPlan`. Mirrors the client-side `hasPlan` logic in useAuthStore so gated
+ * endpoints can't be bypassed by calling the API directly.
+ * Usage: router.get('/endpoint', requirePlan('PRO'), handler)
+ */
+export const requirePlan = (minPlan) => {
+  const minIndex = PLAN_ORDER.indexOf(minPlan.toUpperCase());
+  return async (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const currentPlan = (req.user.orgPlan || req.user.plan || 'FREE').toUpperCase();
+    if (PLAN_ORDER.indexOf(currentPlan) < minIndex) {
+      return res.status(403).json({ message: `This feature requires the ${minPlan} plan or higher` });
+    }
+    next();
+  };
+};
